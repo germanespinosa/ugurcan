@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+
+
+os = []
+for s in range(20):
+  for e in range(10):
+    filename = "Entropy_%d/OcclusionCoordinates_Simulation%d.csv" % (e,s)
+    with open(filename) as f:
+      lines = f.readlines()
+    
+    oe = []
+    for l in lines:
+      if '"' not in l and 'X' not in l:
+        x = int(l.split(',')[0])
+        y = int(l.split(',')[1])
+        oe+=[[x,y]]
+  os += [oe]
+print(os)
+

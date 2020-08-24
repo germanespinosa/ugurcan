@@ -1,0 +1,7 @@
+Action,Agent X,Agent Y,Observation,Predator X,Predator Y,Reward
+-1,7,0,-1,5,1,0
+1,8,0,1,6,1,-1
+1,9,0,1,8,1,-1
+1,10,0,1,9,0,-1
+1,11,0,1,11,0,-101
+1,11,0,1,11,0,-101
