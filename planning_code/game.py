@@ -2,6 +2,7 @@ from simulator import Simulator
 from grid import Grid
 from coord import COORD, COMPASS, Compass, CompassString, Opposite, AggressiveDirectionalDistance
 from utils import Random, Bernoulli, SetFlag
+
 from math import floor
 import numpy as np
 

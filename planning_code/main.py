@@ -5,15 +5,12 @@ from experiment import ExperimentParams, Experiment
 from entropy import UnitTestENTROPY
 from utils import UnitTestUTILS
 from coord import COORD, UnitTestCOORD
-import json
 
 import os, sys, itertools,  glob
 from pathlib2 import Path
 import numpy as np
 import pandas as pd
 import cPickle as pickle
-from multiprocessing import Pool
-
 #import pickle
 #from mpi4py import MPI
 
@@ -35,15 +32,10 @@ def GetOcclusions(mainDirectory):
     print("Importing occlusions")
     for simulation in range(numSimulations):
         for entropy in range(numEntropy):
-            occlusionFile = "../simulations/Entropy_%d/OcclusionCoordinates_Simulation%d.csv" % (entropy, simulation)
-            with open(occlusionFile) as f:
-                lines = f.readlines()
-            o = []
-            for l in lines:
-                if '"' not in l and 'X' not in l:
-                    o += [(int(l.split(',')[0]), int(l.split(',')[1]))]
+            occlusionFile = mainDirectory+"/Data/Simulation_%d/Occlusion_%d/OcclusionCoordinates.csv"%(simulation, entropy)
 
-            occlusionCoordinates = [COORD(x[0], x[1]) for x in o]
+            occlusion = pd.read_csv(occlusionFile, header=0)
+            occlusionCoordinates = [COORD(x[0], x[1]) for x in occlusion[['X', 'Y']].values]
 
             occlusions[simulation][entropy] = occlusionCoordinates
     return occlusions
@@ -55,12 +47,12 @@ def GetPredatorLocations(mainDirectory):
         for entropy in range(numEntropy):
             for predator in range(numPredators):
                 try:
-                    episodeFolder = mainDirectory + '/../Data_NatComm/Simulation_%d/Occlusion_%d/Predator_%d/Depth_5000/Episode_*.csv' % (
+                    episodeFolder = mainDirectory + '/Data/Simulation_%d/Occlusion_%d/Predator_%d/Depth_1000/Episode_*.csv' % (
                     simulation, entropy, predator)
                     episodeFiles = glob.glob(episodeFolder)
                     episode = pd.read_csv(episodeFiles[0], header=0)
                 except IndexError:
-                    episodeFolder = mainDirectory + '/../Data_NatComm/Simulation_%d/Occlusion_%d/Predator_%d/Depth_1/Episode_*.csv' % (
+                    episodeFolder = mainDirectory + '/Data/Simulation_%d/Occlusion_%d/Predator_%d/Depth_1/Episode_*.csv' % (
                         simulation, entropy, predator)
                     episodeFiles = glob.glob(episodeFolder)
                     try:
@@ -104,8 +96,6 @@ def MultiExperiment(args):
     trial = args[5]
     simulationInd = args[6]
 
-
-    print(args)
     #occlusionInd = occlusionInfo[0]
     #occlusions = occlusionInfo[1]
     #predatorInd = predatorInfo[0]
@@ -123,6 +113,7 @@ def MultiExperiment(args):
     knowledge.SmartTreeValue = smarttreevalue
 
     experiment = Experiment(real, simulator)
+
     simulationDirectory = directory + '/Data/Simulation_%d_Entropy_%d'%(simulationInd, occlusionInd)
     Path(simulationDirectory).mkdir(parents=True, exist_ok=True)
 
@@ -147,7 +138,6 @@ tags = enum('READY', 'DONE', 'EXIT', 'START')
 
 
 if __name__ == "__main__":
-    shortest_paths = json.load(open("shortest_paths.json"))
     sys.setrecursionlimit(10000)
     rank = 0
     #comm = MPI.COMM_WORLD
@@ -158,9 +148,9 @@ if __name__ == "__main__":
     if rank == 0:
         with open('init_vars.pkl', 'r') as f:
             occlusions, predators = pickle.load(f)
-        planningDir = "/home/german/ugurcan/simulations"
-        occlusionsMasterList = GetOcclusions(planningDir)
-        predatorLocationsMasterList = GetPredatorLocations(planningDir)
+        planningDir = "/Users/mugan/Desktop/Data"
+        occlusions = GetOcclusions(planningDir)
+        predators = GetPredatorLocations(planningDir)
         with open('init_e.pkl', 'w') as f:
             pickle.dump([occlusions, predators], f)
 
@@ -171,8 +161,8 @@ if __name__ == "__main__":
     #     #UnitTests()
     #
     #     if not os.path.exists('arguments.pkl'):
-        depthList = [0]
-        visualRange = [100]
+    #         depthList = [1, 10, 100, 1000, 5000]
+    #         visualRange = [1, 3, 5]
     #         with open('variables.pkl', 'r') as f:
     #             _, predatorLocationsMasterList, occlusionsMasterList = pickle.load(f)
     #         #predatorLocationsMasterList = GetPredatorLocations(mainDir)
@@ -183,43 +173,46 @@ if __name__ == "__main__":
     #                                 for ent_ind, val in enumerate(sim_sublist) if ent_ind in range(4, 7)]
     #         midEntropyPredatorLocations = [(val_ind, val) for sim_sublist in predatorLocationsMasterList
     #                                        for ent_ind, ent_sublist in enumerate(sim_sublist) for val_ind, val in enumerate(ent_sublist)
-    #                                        if ent_ind in range(4, 7)]
-        arguments = []
-        simulationIndex = -1
-        for s, simulations in enumerate(occlusionsMasterList):
-            for e, occlusionList in enumerate(simulations):
-                for pl in predatorLocationsMasterList[s][e]:
-                    for trial in range(ExperimentParams.MaxDoubles):
-                        arguments.append([s, e, occlusionList, pl, trial, shortest_paths[s][e]])
-
-        print(len(arguments))
-
-        # with open('arguments.pkl', 'w') as f:
-        #     pickle.dump(arguments, f)
-        #     print('Pickled arguments for parallel processing...')
-        #
-        # with open('arguments.pkl', 'r') as f:
-        #     #try:
-        #     tasks = pickle.load(f)
-        #     #except UnicodeDecodeError:  # python 3.x
-        #     	#seek(0); tasks = pickle.load(f, encoding='latin1')
-        # print('Loaded pickled arguments for parallel processing')
-        # subsetTasks = [task for task in tasks]
-        # subsetTasks = [(planningDir,) + task for task in subsetTasks]
-        # nThread = 18
-        # print("Starting parallel pool with {0} threads".format(nThread))
-        for t in arguments:
-            MultiExperiment(t)
-        # with Pool(processes=nThread) as pool:
-        #    pool.starmap(SafeMultiExperiment, subsetTasks)
+    #                                        if ent_ind in range(4, 7)]`
+    #         arguments = []
+    #         simulationIndex = -1
+    #         for i, occlusionList in enumerate(midEntropyOcclusionList):
+    #             if occlusionList[0] == 4:
+    #                 simulationIndex += 1
+    #             products = list(itertools.product([occlusionList], visualRange, depthList,
+    #                             [midEntropyPredatorLocations[i]], range(ExperimentParams.MaxDoubles)))
+    #             products = [p + (simulationIndex,) for p in products]
+    #             arguments.append(products)
+    #         arguments = list(itertools.chain.from_iterable(arguments))
+    #
+    #         with open('arguments.pkl', 'w') as f:
+    #             pickle.dump(arguments, f)
+    #         print('Pickled arguments for parallel processing...')
+    #
+    #     with open('arguments.pkl', 'r') as f:
+    #         #try:
+    #         tasks = pickle.load(f)
+    #         #except UnicodeDecodeError:  # python 3.x
+    #         	#seek(0); tasks = pickle.load(f, encoding='latin1')
+    #     print('Loaded pickled arguments for parallel processing')
+    #
+    #     #subsetTasks = [task for task in tasks if task[5] == 0]
+    #     #subsetTasks = subsetTasks[:10]
+    #     subsetTasks = [task for task in tasks if task[3][0] == 0]
+    #     subsetTasks = [(planningDir,) + task for task in subsetTasks]
+    #     #subsetTasks = subsetTasks[:10]
+    #     #nThread = cpu_count() - 2
+    #     #print("Starting parallel pool with {0} threads".format(nThread))
+    #     #with Pool(processes=nThread) as pool:
+    #     #    pool.starmap(SafeMultiExperiment, subsetTasks)
 	# #subsetTasks = subsetTasks[18000:]
     #     subsetTasks2 = [st for st in subsetTasks if st[3] == 100]
-        task_index = 0
-        numWorkers = nThread
-        closedWorkers = 0
-        print("Master starting with %d workers" % numWorkers)
-        print("Total number of tasks %d" % len(subsetTasks))
-	# #
+    #     task_index = 0
+    #     numWorkers = size - 1
+    #     closedWorkers = 0
+    #     print("Master starting with %d workers" % numWorkers)
+    #     print("Total number of tasks %d" % len(subsetTasks2))
+	#
     #     while closedWorkers < numWorkers:
     #         #data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
     #         #source = status.Get_source()

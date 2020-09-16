@@ -1,0 +1,12 @@
+Main loads paramets in the pickle file.
+
+For visual range (cone: 1, 3, 5) only mid entropy environments are considered,
+if visual range if "full" no visual range parameter is provided.
+
+The task of main is to create a list of arguments in the form:
+directory: Directory housing the data
+tuple: (occlusion_index (0--10), occlusion_coordinates)
+tuple: (predator_index (0--5), predator_home_coordinate)
+simulation index 0--20
+if visual range: visual range
+depth

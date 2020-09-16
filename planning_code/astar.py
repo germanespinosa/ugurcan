@@ -77,6 +77,7 @@ class AStar(object):
         return path
 
     def Solve(self):
+
         heapq.heappush(self.Opened, (self.StartCell.f, self.StartCell))
         while len(self.Opened):
             f, cell = heapq.heappop(self.Opened)

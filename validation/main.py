@@ -1,9 +1,11 @@
+from world import World
+from paths import Paths
+from visibility import Visibility
 import numpy as np
 import os.path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import json
-
 
 def load_json(file_name):
     with open(file_name) as f:
@@ -18,9 +20,9 @@ def save_json(value, file_name):
         json.dump(value, outfile)
 
 def get_episode (simulation, entropy, p_trajectories):
-    episode = {"world": "world_%d_%d" % (simulation, entropy), "goal": {"x": 0, "y": 7}, "trajectories": [], "values": [], "winner": 0}
+    episode = {"world": "world_%d_%d" % (simulation, entropy), "goal": {"x": 0, "y": -7}, "trajectories": [], "values": [], "winner": 0}
     for agents_coordinates in p_trajectories:
-        episode["trajectories"].append([[coordinate["x"]-7,coordinate["y"]-7] for coordinate in agents_coordinates])
+        episode["trajectories"].append([{"x": coordinate["x"] - 7, "y": -(coordinate["y"] - 7)} for coordinate in agents_coordinates])
         episode["values"].append([0 for coordinate in agents_coordinates])
     episode["winner"] = episode["trajectories"][-1][0] != [7,0]
     return episode
@@ -70,8 +72,9 @@ def load_occlusions(simulation, entropy):
             p_occlusions.append(position)
     return p_occlusions
 
-def get_winner ( p_trajectories ):
-    return trajectories[-1][0]["x"] == 7 and trajectories[-1][0]["y"] == 14;
+
+def get_winner(p_trajectories):
+    return trajectories[-1][0]["x"] == 7 and trajectories[-1][0]["y"] == 14
 
 
 failed_episodes = 0
@@ -80,6 +83,10 @@ failures_per_entropy = [0 for x in range(10)]
 for e in range(10):
     for s in range(20):
         occlusions = load_occlusions(simulation=s, entropy=e)
+        world_name = "world_%d_%d" % (s, e)
+        world = World(world_name)
+        paths = Paths(world, "euclidean")
+        visibility = Visibility(world)
         for p in range(5):
             for i in range(50):
                 filename = get_path(simulation=s, entropy=e, predator_location=p, episode=i)
@@ -87,10 +94,10 @@ for e in range(10):
                     trajectories = load_trajectories(filename)
                     heatmap = create_heatmap(trajectories)
                     winner = get_winner(trajectories)
-                    if winner == 0 and count_repetitions(heatmap, 3) > 0:
+                    if winner and count_repetitions(heatmap, 6) > 0:
                         failed_episodes += 1
                         failures_per_entropy[e] += 1
-                        # print("Simulation %d, Entropy %d, Predator location %d, Episode %d: " % (s, e, p, i), end="")
+                        print("https://germanespinosa.github.io/cellworld_www/episode_replay.html?experiment=0&group=%d&world=%d&configuration=%d&episode=%d&step=0&&agent=0" % (e, s, p, i))
                         # print("fail")
                         # fig, (ax1, ax2) = plt.subplots(1, 2)
                         # im = ax1.imshow(heatmap, cmap='Reds')
